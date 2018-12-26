@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "build": "vue-cli-service build --modern",
+    "lint": "vue-cli-service lint",
+    "now-build": "yarn build --modern"
   },
   "dependencies": {
     "@carto/airship-components": "^1.0.3",
