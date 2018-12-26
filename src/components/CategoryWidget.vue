@@ -26,7 +26,6 @@ export default {
     }
   },
   mounted: function () {
-    console.log('Mounting')
     if (this.$refs.categoryWidget) {
       this.categoryWidget = this.$refs.categoryWidget
     }

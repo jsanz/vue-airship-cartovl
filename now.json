@@ -1,6 +1,7 @@
 {
   "version": 2,
   "name": "vue-airship-cartovl",
+  "alias": "vue-airship-cartovl",
   "builds": [
       { "src": "package.json", "use": "@now/static-build" }
   ],

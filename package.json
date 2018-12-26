@@ -6,7 +6,7 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build --modern",
     "lint": "vue-cli-service lint",
-    "now-build": "yarn build --modern"
+    "now-build": "yarn build"
   },
   "dependencies": {
     "@carto/airship-components": "^1.0.3",
