@@ -80,9 +80,6 @@ export default {
     ...mapActions([
       'moveTo'
     ]),
-    numberFormat: function (number) {
-      return this.numbFormatter.format(number)
-    },
     initialize: function () {
       const responsiveContent = document.querySelector('as-responsive-content')
       responsiveContent.addEventListener('ready', () => {
@@ -145,7 +142,6 @@ export default {
       if (categories.length > 0) {
         const catFormatted = categories.map(c => { return `'${c}'` })
         const filter = `$economy in [${catFormatted.join(',')}]`
-        console.log('FILTER:', filter)
         this.viz.filter.blendTo(filter, 200)
       } else {
         this.viz.filter.blendTo(1, 200)
