@@ -19,13 +19,21 @@
           description="Countries by economy"
           :show-clear=true
           :categories=countries_economies_cat
-          v-on:new-categories="onNewCategories"
+          v-on:new-categories="onWBNewCategories"
         />
       </div>
     </aside>
     <main class="as-main">
       <div class="as-map-area">
         <div id="map"></div>
+        <!-- Map Panels -->
+        <div class="as-map-panels">
+          <div class="as-panel as-panel--top as-panel--right">
+            <div class="as-panel__element">
+              <layer-selector :layers=layers />
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </as-responsive-content>
@@ -39,6 +47,7 @@ import carto from '@carto/carto-vl'
 
 import FormulaWidget from '@/components/FormulaWidget'
 import CategoryWidget from '@/components/CategoryWidget'
+import LayerSelector from '@/components/LayerSelector'
 
 export default {
   name: 'Dashboard',
@@ -46,7 +55,8 @@ export default {
   },
   components: {
     FormulaWidget,
-    CategoryWidget
+    CategoryWidget,
+    LayerSelector
   },
   data: function () {
     return {
@@ -67,22 +77,51 @@ export default {
     }
   },
   computed: {
-    ...mapState({
-      delay: 'delay',
-      center: 'center',
-      zoom: 'zoom'
-    })
+    visibleLayers: function () {
+      return this.layers.filter(l => { return l.visible }).length
+    },
+    ...mapState([
+      'delay',
+      'center',
+      'zoom',
+      'auth',
+      'layers'
+    ])
   },
   mounted: function () {
     this.initialize()
   },
+  watch: {
+    visibleLayers: function () {
+      this.layers.forEach(l => {
+        if (l.visible !== l.vlLayer.visible) {
+          if (l.visible) {
+            l.vlLayer.show()
+          } else {
+            l.vlLayer.hide()
+          }
+        }
+      })
+    }
+  },
   methods: {
     ...mapActions([
-      'moveTo'
+      'moveTo',
+      'addVLLayer'
     ]),
+    getVLLayer: function (id) {
+      const storeLayer = this.layers.filter(l => { return l.id === id })[0]
+      return storeLayer.vlLayer
+    },
+    getViz: function (id) {
+      const storeLayer = this.layers.filter(l => { return l.id === id })[0]
+      return storeLayer.viz
+    },
     initialize: function () {
       const responsiveContent = document.querySelector('as-responsive-content')
+      const ctx = this
       responsiveContent.addEventListener('ready', () => {
+        /* Create the map object from store properties */
         const map = new mapboxgl.Map({
           container: 'map',
           style: carto.basemaps.voyager,
@@ -91,60 +130,74 @@ export default {
         })
 
         const nav = new mapboxgl.NavigationControl({
-          showCompass: true
+          showCompass: false
         })
-
         map.addControl(nav, 'top-left')
 
-        carto.setDefaultAuth({
-          username: 'jsanzcdb',
-          apiKey: 'default_public'
+        /* whenever the map moves, update the store */
+        map.on('moveend', this.moveTo)
+
+        /* Set up the CARTO VL layers */
+        carto.setDefaultAuth(this.auth)
+
+        ctx.layers.forEach(layer => {
+          const id = layer.id
+          const name = layer.name
+          let source = null
+
+          if (layer.sql) {
+            source = new carto.source.SQL(layer.sql)
+          } else if (layer.dataset) {
+            source = new carto.source.Dataset(layer.dataset)
+          } else {
+            throw new Error(`No source defined on for ${name}`)
+          }
+
+          if (layer.vizDefinition) {
+            const viz = new carto.Viz(layer.vizDefinition)
+            const vlLayer = new carto.Layer(id, source, viz)
+            /* store the VL objects */
+            ctx.addVLLayer({ 'id': id, 'vlLayer': vlLayer, 'viz': viz })
+
+            /* add the layer to the map */
+            vlLayer.addTo(map, layer.belowTo)
+
+            vlLayer.on('loaded', () => {
+              /* hide layer if needed */
+              if (!layer.visible) {
+                vlLayer.hide()
+              }
+            })
+          } else {
+            throw new Error(`No viz definition for ${name}`)
+          }
         })
 
-        const source = new carto.source.SQL(`
-        select *,
-               case when gdp_md_est <> -99
-                  then gdp_md_est
-                  else gdp_year
-               end as gdp
-          from world_borders_hd
-        `)
-        const viz = new carto.Viz(`
+        /* Add widgets for the world borders layer */
+        const id = 'world_borders'
 
-        @viewPop: viewportSum($pop_est)
-        @viewGDP: viewportAvg($gdp)
-        @viewEconomies: viewportHistogram($economy)
-
-        color: opacity(red,0.2)
-        strokeColor: black
-        `)
-
-        const layer = new carto.Layer('layer', source, viz)
-        layer.addTo(map, 'watername_ocean')
-
-        layer.on('updated', () => {
-          this.countries_pop = viz.variables.viewPop.value
-          this.countries_gdp = viz.variables.viewGDP.value
-          this.countries_economies_cat = viz.variables.viewEconomies.value.map(f => {
+        ctx.getVLLayer(id).on('updated', () => {
+          const viz = ctx.getViz(id)
+          ctx.countries_pop = viz.variables.viewPop.value
+          ctx.countries_gdp = viz.variables.viewGDP.value
+          ctx.countries_economies_cat = viz.variables.viewEconomies.value.map(f => {
             return {
               name: f.x,
               value: f.y
             }
           })
         })
-
-        map.on('moveend', this.moveTo)
-
-        this.viz = viz
       })
     },
-    onNewCategories: function (categories) {
+    /* Update the visualization when categories are selected on the widget */
+    onWBNewCategories: function (categories) {
+      const viz = this.getViz('world_borders')
       if (categories.length > 0) {
         const catFormatted = categories.map(c => { return `'${c}'` })
         const filter = `$economy in [${catFormatted.join(',')}]`
-        this.viz.filter.blendTo(filter, 200)
+        viz.filter.blendTo(filter, 200)
       } else {
-        this.viz.filter.blendTo(1, 200)
+        viz.filter.blendTo(1, 200)
       }
     }
   }
