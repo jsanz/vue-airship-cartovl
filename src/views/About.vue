@@ -16,18 +16,11 @@
     </div>
     <div class="as-box">
       <h2 class="as-title">Layers</h2>
-      <ul class="as-list" v-for="layer in layers" :key="layer.id">
-        <li class="as-list__item">{{layer.name}}&nbsp;
+      <ul class="as-list">
+        <li class="as-list__item" v-for="layer in layers" :key="layer.id">
+          {{layer.name}}&nbsp;
           <span v-if="layer.visible">(visible)</span>
           <span v-else>(hidden)</span>
-          <ul class="as-list">
-            <li class="as-list__item">
-              <span v-if="layer.dataset">Name:
-                <tt>{{layer.dataset}}</tt>
-              </span>
-              <span v-else>Query: <code>{{layer.sql}}</code></span>
-            </li>
-          </ul>
         </li>
       </ul>
     </div>

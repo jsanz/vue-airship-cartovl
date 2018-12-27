@@ -1,5 +1,10 @@
 <template>
   <as-responsive-content>
+    <aside class="as-sidebar as-sidebar--left" data-name="Legend">
+      <div class="as-container as-container--scrollable">
+        <layer-selector :layers=layers />
+      </div>
+    </aside>
     <aside class="as-sidebar as-sidebar--right as-sidebar--xl" data-name="Widgets">
       <div class="as-container as-container--scrollable">
         <formula-widget
@@ -36,13 +41,7 @@
     <main class="as-main">
       <div class="as-map-area">
         <div id="map"></div>
-        <div class="as-map-panels" data-name="Legend">
-          <div class="as-panel as-panel--top as-panel--right">
-            <div class="as-panel__element">
-              <layer-selector :layers=layers />
-            </div>
-          </div>
-        </div>
+
       </div>
     </main>
   </as-responsive-content>
