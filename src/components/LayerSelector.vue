@@ -9,12 +9,14 @@
         :label=layer.name
         v-on:switch="switchLayer">
       </switch-widget>
+      <legend-widget v-if=layer.visible :viz=layer.viz />
     </div>
   </div>
 </template>
 
 <script>
 import SwitchWidget from '@/components/SwitchWidget'
+import LegendWidget from '@/components/LegendWidget'
 
 export default {
   name: 'LayerSelector',
@@ -22,7 +24,8 @@ export default {
     layers: Array
   },
   components: {
-    SwitchWidget
+    SwitchWidget,
+    LegendWidget
   },
   methods: {
     switchLayer: function (event) {

@@ -6,6 +6,9 @@
       :description="description"
       :show-clear-button="showClear"
       :defaultBarColor="defaultBarColor"
+      :error="error"
+      :error-description="errorDescription"
+      :is-loading="isLoading"
     ></as-category-widget>
   </div>
 </template>
@@ -18,11 +21,22 @@ export default {
     description: String,
     showClear: Boolean,
     defaultBarColor: String,
-    categories: Array
+    categories: Array,
+    error: String,
+    isLoading: Boolean
   },
   data: function () {
     return {
       categoryWidget: null
+    }
+  },
+  computed: {
+    errorDescription: function () {
+      if (this.error) {
+        return 'Layer is deactivated'
+      } else {
+        return false
+      }
     }
   },
   mounted: function () {

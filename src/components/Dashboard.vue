@@ -1,24 +1,34 @@
 <template>
   <as-responsive-content>
-    <aside class="as-sidebar as-sidebar--right as-sidebar--xl" data-name="Sidebar">
+    <aside class="as-sidebar as-sidebar--right as-sidebar--xl" data-name="Widgets">
       <div class="as-container as-container--scrollable">
         <formula-widget
-          title="View population"
+          ref="countries_pop"
+          class="js-worldborders-widget"
+          title="Population"
+          unit="Inhabitants"
           :value=countries_pop
           :formatter=numbFormatter
-          unit="Inhabitants"
+          :error=isCountriesDisabled
         />
         <formula-widget
+          ref="countries_gdp"
+          class="js-worldborders-widget"
           title="Average GDP"
+          unit="Euros"
           :value=countries_gdp
           :formatter=currFormatter
-          unit="Euros"
+          :error=isCountriesDisabled
         />
         <category-widget
+          ref="countries_economies"
+          class="js-worldborders-widget"
           heading="Economies"
           description="Countries by economy"
           :show-clear=true
           :categories=countries_economies_cat
+          :is-loading=isCategoriesLoading
+          :error=isCountriesDisabled
           v-on:new-categories="onWBNewCategories"
         />
       </div>
@@ -26,8 +36,7 @@
     <main class="as-main">
       <div class="as-map-area">
         <div id="map"></div>
-        <!-- Map Panels -->
-        <div class="as-map-panels">
+        <div class="as-map-panels" data-name="Legend">
           <div class="as-panel as-panel--top as-panel--right">
             <div class="as-panel__element">
               <layer-selector :layers=layers />
@@ -80,6 +89,12 @@ export default {
     visibleLayers: function () {
       return this.layers.filter(l => { return l.visible }).length
     },
+    isCategoriesLoading: function () {
+      return this.countries_economies_cat === null
+    },
+    isCountriesDisabled: function () {
+      return !this.getLayer('world_borders').visible ? 'HIDDEN' : null
+    },
     ...mapState([
       'delay',
       'center',
@@ -89,16 +104,18 @@ export default {
     ])
   },
   mounted: function () {
-    this.initialize()
+    this.$nextTick(function () {
+      this.initialize()
+    })
   },
   watch: {
     visibleLayers: function () {
       this.layers.forEach(l => {
-        if (l.visible !== l.vlLayer.visible) {
+        if (l.visible !== l.layer.visible) {
           if (l.visible) {
-            l.vlLayer.show()
+            l.layer.show()
           } else {
-            l.vlLayer.hide()
+            l.layer.hide()
           }
         }
       })
@@ -107,26 +124,24 @@ export default {
   methods: {
     ...mapActions([
       'moveTo',
-      'addVLLayer'
+      'setViz'
     ]),
-    getVLLayer: function (id) {
-      const storeLayer = this.layers.filter(l => { return l.id === id })[0]
-      return storeLayer.vlLayer
-    },
-    getViz: function (id) {
-      const storeLayer = this.layers.filter(l => { return l.id === id })[0]
-      return storeLayer.viz
+    getLayer: function (id) {
+      return this.layers.filter(l => { return l.id === id })[0]
     },
     initialize: function () {
       const responsiveContent = document.querySelector('as-responsive-content')
       const ctx = this
+      const WIDGET_LAYER = 'world_borders'
+
       responsiveContent.addEventListener('ready', () => {
         /* Create the map object from store properties */
         const map = new mapboxgl.Map({
           container: 'map',
           style: carto.basemaps.voyager,
           zoom: this.zoom,
-          center: this.center
+          center: this.center,
+          hash: true
         })
 
         const nav = new mapboxgl.NavigationControl({
@@ -137,68 +152,58 @@ export default {
         /* whenever the map moves, update the store */
         map.on('moveend', this.moveTo)
 
-        /* Set up the CARTO VL layers */
-        carto.setDefaultAuth(this.auth)
+        ctx.layers.forEach(storeLayer => {
+          const id = storeLayer.id
+          const name = storeLayer.name
 
-        ctx.layers.forEach(layer => {
-          const id = layer.id
-          const name = layer.name
-          let source = null
-
-          if (layer.sql) {
-            source = new carto.source.SQL(layer.sql)
-          } else if (layer.dataset) {
-            source = new carto.source.Dataset(layer.dataset)
-          } else {
-            throw new Error(`No source defined on for ${name}`)
-          }
-
-          if (layer.vizDefinition) {
-            const viz = new carto.Viz(layer.vizDefinition)
-            const vlLayer = new carto.Layer(id, source, viz)
-            /* store the VL objects */
-            ctx.addVLLayer({ 'id': id, 'vlLayer': vlLayer, 'viz': viz })
-
+          if (storeLayer.layer) {
+            const layer = storeLayer.layer
             /* add the layer to the map */
-            vlLayer.addTo(map, layer.belowTo)
+            layer.addTo(map, storeLayer.belowTo)
 
-            vlLayer.on('loaded', () => {
+            layer.on('loaded', () => {
               /* hide layer if needed */
-              if (!layer.visible) {
-                vlLayer.hide()
+              if (!storeLayer.visible) {
+                layer.viz.hide()
               }
+
+              this.setViz({ 'id': id, 'viz': layer.viz })
             })
+
+            if (id === WIDGET_LAYER) {
+              const updateCountries = function () {
+                ctx.countries_pop = layer.viz.variables.viewPop.value
+                ctx.countries_gdp = layer.viz.variables.viewGDP.value
+                ctx.countries_economies_cat = layer.viz.variables.viewEconomies.value.map(f => {
+                  return {
+                    name: f.x,
+                    value: f.y
+                  }
+                })
+              }
+
+              layer.on('updated', updateCountries)
+              layer.on('loaded', updateCountries)
+            }
           } else {
             throw new Error(`No viz definition for ${name}`)
           }
-        })
-
-        /* Add widgets for the world borders layer */
-        const id = 'world_borders'
-
-        ctx.getVLLayer(id).on('updated', () => {
-          const viz = ctx.getViz(id)
-          ctx.countries_pop = viz.variables.viewPop.value
-          ctx.countries_gdp = viz.variables.viewGDP.value
-          ctx.countries_economies_cat = viz.variables.viewEconomies.value.map(f => {
-            return {
-              name: f.x,
-              value: f.y
-            }
-          })
         })
       })
     },
     /* Update the visualization when categories are selected on the widget */
     onWBNewCategories: function (categories) {
-      const viz = this.getViz('world_borders')
+      const wbLayer = this.getLayer('world_borders')
+      const viz = wbLayer.viz
+
+      let filter = 1
+
       if (categories.length > 0) {
         const catFormatted = categories.map(c => { return `'${c}'` })
-        const filter = `$economy in [${catFormatted.join(',')}]`
-        viz.filter.blendTo(filter, 200)
-      } else {
-        viz.filter.blendTo(1, 200)
+        filter = `$economy in [${catFormatted.join(',')}]`
       }
+
+      viz.filter.blendTo(filter, this.delay)
     }
   }
 }
@@ -211,5 +216,16 @@ export default {
 #map {
   height: 100vh;
   width: 100%;
+}
+
+.mapboxgl-popup-tip {
+  border-top-color: red;
+}
+.mapboxgl-popup-content {
+  background: none;
+}
+.as-infowindow {
+  color: red;
+  background-color: red;
 }
 </style>
