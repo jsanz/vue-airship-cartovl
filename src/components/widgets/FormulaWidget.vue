@@ -1,5 +1,5 @@
 <template>
-  <section class="as-box as-widget">
+  <div class="as-box as-widget">
     <as-widget-header>
       <h2 class="as-widget-header__header">{{title}}</h2>
       <div v-if="error">
@@ -8,16 +8,19 @@
       </div>
     </as-widget-header>
     <div v-if="!error && value">
-      <p class="as-display as-mb--0">{{valueFormatted}}</p>
+      <p class="as-body formula-value as-color--type-01 as-font--light as-mb--8">{{valueFormatted}}</p>
       <p class="as-body">{{unit}}</p>
     </div>
     <div v-else-if="isLoading">
       <p class="as-body">Loading...</p>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
+.formula-value{
+  font-size: 2em;
+}
 </style>
 
 <script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="as-box" v-if="categories">
+  <div class="as-box">
     <as-category-widget
       ref="categoryWidget"
       :heading="heading"
@@ -17,6 +17,8 @@
 export default {
   name: 'CategoryWidget',
   props: {
+    layerId: String,
+    field: String,
     heading: String,
     description: String,
     showClear: Boolean,
@@ -42,6 +44,15 @@ export default {
   mounted: function () {
     if (this.$refs.categoryWidget) {
       this.categoryWidget = this.$refs.categoryWidget
+      const layerId = this.layerId
+      const field = this.field
+      this.categoryWidget.addEventListener('categoriesSelected', event => {
+        this.$emit('new-categories', {
+          'layerId': layerId,
+          'field': field,
+          'categories': event.detail
+        })
+      })
     }
   },
   methods: {
@@ -54,12 +65,6 @@ export default {
   },
   watch: {
     categories: function (newValue) {
-      if (!this.categoryWidget && this.$refs.categoryWidget) {
-        this.categoryWidget = this.$refs.categoryWidget
-        this.categoryWidget.addEventListener('categoriesSelected', event => {
-          this.$emit('new-categories', event.detail)
-        })
-      }
       if (this.categoryWidget) {
         this.categoryWidget.categories = newValue
       }

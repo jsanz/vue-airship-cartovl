@@ -6,7 +6,8 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build --modern",
     "lint": "vue-cli-service lint",
-    "now-build": "yarn build"
+    "now-build": "yarn build",
+    "deploy": "now alias $(now) vue-airship-cartovl"
   },
   "dependencies": {
     "@carto/airship-components": "^1.0.3",

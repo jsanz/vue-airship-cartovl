@@ -19,6 +19,20 @@ export default new Vuex.Store({
     zoom: 4,
     delay: 400,
     layers: [{
+      id: 'airports',
+      name: 'Airports',
+      viz: null,
+      layer: new carto.Layer('airports',
+        new carto.source.Dataset('airports'),
+        new carto.Viz(`
+            color: ramp($airp_group, [#5F4690,#1D6996,#38A6A5,#0F8554,#73AF48,#EDAD08,#E17C05,#CC503E,#94346E,#6F4070,#994E95,#666666])
+            width: ramp(zoomrange([2, 7]), [3, 15])
+            strokeWidth: 0
+        `)
+      ),
+      belowTo: 'watername_ocean',
+      visible: false
+    }, {
       id: 'populated_places',
       name: 'Populated Places',
       viz: null,
@@ -27,13 +41,15 @@ export default new Vuex.Store({
         new carto.Viz(`
             @name: $name
             @popMax: $pop_max
+            @viewFeatureCla: viewportHistogram($featurecla)
+
             color: ramp($featurecla, [#E58606,#5D69B1,#52BCA3,#99C945,#CC61B0,#24796C,#DAA51B,#2F8AC4,#764E9F,#ED645A,#CC3A8E,#A5AA99])
             width: ramp(zoomrange([2, 7]), [3, 15])
             strokeColor: black
             strokeWidth: 1
         `)
       ),
-      belowTo: 'watername_ocean',
+      belowTo: 'airports',
       visible: true
     }, {
       id: 'world_borders',
@@ -58,6 +74,11 @@ export default new Vuex.Store({
       belowTo: 'populated_places',
       visible: true
     }]
+  },
+  getters: {
+    getLayerById: (state) => (id) => {
+      return state.layers.filter(l => { return l.id === id })[0]
+    }
   },
   mutations: {
     changeCenter (state, center) {

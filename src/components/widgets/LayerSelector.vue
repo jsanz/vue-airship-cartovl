@@ -15,8 +15,8 @@
 </template>
 
 <script>
-import SwitchWidget from '@/components/SwitchWidget'
-import LegendWidget from '@/components/LegendWidget'
+import SwitchWidget from '@/components/widgets/SwitchWidget'
+import LegendWidget from '@/components/widgets/LegendWidget'
 
 export default {
   name: 'LayerSelector',
