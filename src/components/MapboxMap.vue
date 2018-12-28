@@ -77,6 +77,7 @@ export default {
         map.addControl(nav, 'top-left')
 
         /* whenever the map moves, update the store */
+        map.on('load', this.moveTo)
         map.on('moveend', this.moveTo)
 
         layers.forEach(storeLayer => {

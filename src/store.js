@@ -97,7 +97,8 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    moveTo ({ commit }, { map }) {
+    moveTo ({ commit }, { target }) {
+      const map = target
       if (map) {
         commit('changeCenter', map.getCenter())
         commit('changeZoom', map.getZoom())
